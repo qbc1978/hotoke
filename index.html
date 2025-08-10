@@ -18,9 +18,10 @@
     }
     
     #loading {
-      font-size: 18px;
+      font-size: 24px;
       text-align: center;
       color: #2d3436;
+      font-weight: bold;
     }
     
     .header {
@@ -124,12 +125,16 @@
       padding: 20px;
       border-radius: 10px;
     }
+    
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <div class="header">🌸今日のあなたの梵字曼荼羅🌸</div>
+  <div class="header hidden">🌸今日のあなたの梵字曼荼羅🌸</div>
   
-  <div id="loading">鑑定中…</div>
+  <div id="loading">鑑定中...</div>
   
   <div id="view" style="display:none">
     <div class="name-section">🌟「<span id="title"></span>」🌟</div>
@@ -142,7 +147,7 @@
   
   <div id="error" style="display:none"></div>
   
-  <div class="cta-section">
+  <div class="cta-section hidden">
     <div class="cta-text">
       梵字曼荼羅カードリーディングセッションの<br>
       お申し込みは、こちらから！
@@ -157,6 +162,7 @@
     const $ = s => document.querySelector(s);
     const loading = $('#loading'), view = $('#view'), err = $('#error');
     const img = $('#img'), title = $('#title'), desc = $('#desc'), id = $('#id');
+    const header = $('.header'), ctaSection = $('.cta-section');
     
     function jsonpCallback(data) {
       try {
@@ -165,8 +171,12 @@
         title.textContent = data.name || '';
         desc.textContent = `「${data.result}」` || '';
         id.textContent = data.id ? `No. ${data.id}` : '';
+        
+        // 読み込み完了後、すべてを表示
         loading.style.display = 'none';
+        header.classList.remove('hidden');
         view.style.display = 'grid';
+        ctaSection.classList.remove('hidden');
       } catch (e) {
         loading.style.display = 'none';
         err.textContent = '取得に失敗しました: ' + e.message;
