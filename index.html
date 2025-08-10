@@ -1,0 +1,85 @@
+// ===== 設定 =====
+const SPREADSHEET_ID = '1yypv6jAIuZq8YgTA-nUhp4fxcXK1ItGuLjKTaWU7xDA'; // ←あなたのID
+const SHEET_NAME = 'hotoke';
+
+// ===== ルータ =====
+function doGet(e) {
+  const path = (e && e.pathInfo) ? e.pathInfo.split('/').filter(Boolean) : [];
+  const route = path[0] || 'draw';
+  try {
+    if (route === 'image') return handleImage(e);
+    return handleDraw();
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok:false, error:String(err) }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({'Access-Control-Allow-Origin':'*'});
+  }
+}
+
+// ===== 抽選 =====
+function handleDraw() {
+  const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  const values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) throw new Error('データ行がありません');
+
+  const header = values[0];
+  const rows = values.slice(1).filter(r => r.join('').trim() !== '');
+
+  const idx = name => header.indexOf(name);
+  const iNo   = idx('no');
+  const iCat  = idx('分類');
+  const iName = idx('名前');
+  const iText = idx('占い結果');
+  const iImg  = idx('画像URL'); // ここにGoogleドライブURL
+
+  // ランダム1件
+  const pick = rows[Math.floor(Math.random() * rows.length)];
+
+  // 画像URL → fileId 抜き出し（共有URL/サムネURL どっちでもOK）
+  const rawUrl = String(pick[iImg] || '');
+  const fileId = extractDriveFileId(rawUrl);
+  if (!fileId) throw new Error('画像URLからfileIdが取れません: ' + rawUrl);
+
+  // GAS経由画像URL
+  const base = ScriptApp.getService().getUrl();
+  const imageUrl = base.replace(/\/exec$/, '/exec/image') + '?fileId=' + encodeURIComponent(fileId);
+
+  const payload = {
+    ok: true,
+    id: pick[iNo] ?? '',
+    category: pick[iCat] ?? '',
+    name: pick[iName] ?? '',
+    result: pick[iText] ?? '',
+    imageUrl
+  };
+
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'});
+}
+
+// ===== 画像プロキシ（ドライブ公開不要）=====
+function handleImage(e) {
+  const fileId = e.parameter.fileId;
+  if (!fileId) throw new Error('fileIdが必要です');
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  return ContentService.createBinaryOutput().setContent(blob.getBytes())
+    .setMimeType(blob.getContentType())
+    .setHeaders({'Access-Control-Allow-Origin':'*','Cache-Control':'public, max-age=3600'});
+}
+
+// 共有URLやサムネURLからfileIdを抜く
+function extractDriveFileId(url) {
+  if (!url) return '';
+  // パターン例:
+  // https://drive.google.com/file/d/<ID>/view?usp=...
+  // https://drive.google.com/open?id=<ID>
+  // https://lh3.googleusercontent.com/d/<ID>=s...
+  const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+  if (m1) return m1[1];
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if (m2) return m2[1];
+  const m3 = url.match(/googleusercontent\.com\/[^/]+\/([a-zA-Z0-9_-]{10,})/);
+  if (m3) return m3[1];
+  return '';
+}
