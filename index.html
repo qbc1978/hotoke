@@ -1,106 +1,41 @@
 <!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>今日の占い</title>
-  <style>
-    :root { --bg:#0b0c10; --card:#15171b; --text:#eef2f7; --muted:#a7b0bd; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
-      background: radial-gradient(1200px 800px at 70% -20%, #1f2430 0%, #0b0c10 60%);
-      color: var(--text); min-height: 100svh; display: grid; place-items: center; padding: 24px;
-    }
-    .wrap { width: min(920px, 100%); }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-      backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 24px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-    }
-    h1 { font-size: clamp(22px, 3.4vw, 36px); margin: 0 0 12px; letter-spacing: .02em; }
-    p.lead { color: var(--muted); margin: 0 0 20px; }
-    .actions { display: flex; gap: 12px; margin: 20px 0 24px; }
-    button {
-      appearance: none; border: 0; border-radius: 14px; padding: 12px 18px; font-weight: 700; cursor: pointer;
-      background: #5c8df6; color: white; box-shadow: 0 10px 24px rgba(92,141,246,.35);
-      transition: transform .06s ease, box-shadow .2s ease;
-    }
-    button:hover { transform: translateY(-1px); }
-    button.secondary { background: #2a2f3a; color: #d8dee9; box-shadow: none; }
-    .result {
-      display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start;
-    }
-    .result img {
-      width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);
-    }
-    .title { font-size: clamp(20px, 2.6vw, 28px); margin: 8px 0; }
-    .desc { color: var(--muted); line-height: 1.75; }
-    .muted { color: var(--muted); font-size: 12px; }
-    .hidden { display: none; }
-    @media (max-width: 720px) {
-      .result { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
+<meta charset="utf-8">
+<title>今日の占い</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #fff; text-align: center; padding: 2em; }
+  img { max-width: 80%; height: auto; border-radius: 8px; margin-top: 1em; }
+  .title { font-size: 2em; margin-top: 0.5em; }
+  .desc { margin-top: 0.5em; font-size: 1.2em; }
+</style>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>今日の占い</h1>
-      <p class="lead">ボタンを押すと、ランダムで占い結果が出ます（画像＆テキストはGAS経由で取得）。</p>
-      <div class="actions">
-        <button id="drawBtn">占う ✨</button>
-        <button id="clearBtn" class="secondary">クリア</button>
-      </div>
-
-      <div id="loading" class="muted hidden">引いてます…</div>
-
-      <div id="result" class="result hidden">
-        <img id="resImg" alt="占い画像" />
-        <div>
-          <div class="title" id="resTitle"></div>
-          <div class="desc" id="resDesc"></div>
-          <div class="muted" id="resId"></div>
-        </div>
-      </div>
-
-      <div id="error" class="muted hidden"></div>
-    </div>
-  </div>
-
-  <script>
-    // ← ここをあなたのGASウェブアプリURL（/exec）に差し替える
-    const API_BASE = 'https://script.google.com/macros/s/XXXXXXXXXXXX/exec';
-
-    const $ = (s)=>document.querySelector(s);
-    const drawBtn = $('#drawBtn'), clearBtn = $('#clearBtn');
-    const resultEl = $('#result'), imgEl = $('#resImg'), titleEl = $('#resTitle'), descEl = $('#resDesc'), idEl = $('#resId');
-    const loadingEl = $('#loading'), errorEl = $('#error');
-
-    function show(el){ el.classList.remove('hidden'); }
-    function hide(el){ el.classList.add('hidden'); }
-
-    async function draw() {
-      hide(errorEl); hide(resultEl); show(loadingEl);
-      try {
-        const res = await fetch(`${API_BASE}/draw`, { method: 'GET' }); // シンプルGETでCORSプレフライト回避
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || 'error');
-        imgEl.src = data.imageUrl;
-        titleEl.textContent = data.title || '結果';
-        descEl.textContent = data.description || '';
-        idEl.textContent = data.id ? `#${data.id}` : '';
-        show(resultEl);
-      } catch (err) {
-        errorEl.textContent = '取得に失敗しました：' + err.message;
-        show(errorEl);
-      } finally {
-        hide(loadingEl);
+<h1>今日の占い</h1>
+<div id="loading">占い結果を取得中…</div>
+<div id="result" style="display:none">
+  <img id="resImg">
+  <div class="title" id="resTitle"></div>
+  <div class="desc" id="resDesc"></div>
+</div>
+<script>
+  const API_BASE = "https://script.google.com/macros/s/AKfycbzo-yHnEJT-DXxhEKNNtrnuMV0TxtQmALI1QoWm9zQtH_pKOzeaXAXzHis3icPfApo/exec"; // 差し替え
+  async function loadResult(){
+    try {
+      const res = await fetch(`${API_BASE}/draw`);
+      const data = await res.json();
+      if(data.ok){
+        document.getElementById("resImg").src = data.imageUrl;
+        document.getElementById("resTitle").textContent = data.name || "";
+        document.getElementById("resDesc").textContent = data.result || "";
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("result").style.display = "block";
+      } else {
+        document.getElementById("loading").textContent = "取得失敗: " + (data.error || "");
       }
+    } catch(e){
+      document.getElementById("loading").textContent = "エラー: " + e.message;
     }
-
-    drawBtn.addEventListener('click', draw);
-    clearBtn.addEventListener('click', ()=>{ hide(resultEl); hide(errorEl); });
-  </script>
+  }
+  loadResult();
+</script>
 </body>
 </html>
