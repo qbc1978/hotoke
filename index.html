@@ -14,28 +14,19 @@
     <div id="id"></div>
   </div>
   <div id="error" style="display:none"></div>
-
   <script>
-    const API_BASE = "https://script.google.com/macros/s/AKfycbzCoNRTv7P3EB3DqjHPu0EdvCA-MHa005MWPaTZ-5KKTbGcKyyrS-DLwkOvYlwoNui8/exec";
-
+    const API_BASE = "https://script.google.com/macros/s/AKfycbwiE9VveUBrKQuHHCKkNU90K6H1gBjA6cWdd3qEaHUTqRyia1qOUZGCzzcfH5gqklRH/exec";
     const $ = s => document.querySelector(s);
     const loading = $('#loading'), view = $('#view'), err = $('#error');
     const img = $('#img'), title = $('#title'), desc = $('#desc'), id = $('#id');
-
-    async function load() {
+    
+    function jsonpCallback(data) {
       try {
-        const url = `${API_BASE}?_=${Date.now()}`;
-        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'unknown');
-
         img.src = data.imageUrl;
         title.textContent = data.name || '';
         desc.textContent = data.result || '';
         id.textContent = data.id ? `No. ${data.id}` : '';
-
         loading.style.display = 'none';
         view.style.display = 'grid';
       } catch (e) {
@@ -45,9 +36,14 @@
         console.error(e);
       }
     }
+    
+    function load() {
+      const script = document.createElement('script');
+      script.src = `${API_BASE}?callback=jsonpCallback&_=${Date.now()}`;
+      document.head.appendChild(script);
+    }
+    
     load();
   </script>
 </body>
 </html>
-
-
