@@ -24,6 +24,14 @@
       font-weight: bold;
     }
     
+    .guide-name {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #2d3436;
+    }
+    
     .header {
       text-align: center;
       margin-bottom: 15px;
@@ -132,6 +140,7 @@
   </style>
 </head>
 <body>
+  <div class="guide-name hidden">🌟 道先案内人　光陽 ✨</div>
   <div class="header hidden">🌸今日のあなたの梵字曼荼羅🌸</div>
   
   <div id="loading">鑑定中...</div>
@@ -163,7 +172,7 @@
     const $ = s => document.querySelector(s);
     const loading = $('#loading'), view = $('#view'), err = $('#error');
     const img = $('#img'), title = $('#title'), desc = $('#desc'), id = $('#id');
-    const header = $('.header'), ctaSection = $('.cta-section');
+    const guideName = $('.guide-name'), header = $('.header'), ctaSection = $('.cta-section');
     
     function jsonpCallback(data) {
       try {
@@ -175,6 +184,7 @@
         
         // 読み込み完了後、すべてを表示
         loading.style.display = 'none';
+        guideName.classList.remove('hidden');
         header.classList.remove('hidden');
         view.style.display = 'grid';
         ctaSection.classList.remove('hidden');
