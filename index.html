@@ -15,7 +15,7 @@
   </div>
   <div id="error" style="display:none"></div>
   <script>
-    const API_BASE = "https://script.google.com/macros/s/AKfycbwiE9VveUBrKQuHHCKkNU90K6H1gBjA6cWdd3qEaHUTqRyia1qOUZGCzzcfH5gqklRH/exec";
+    const API_BASE = "https://script.google.com/macros/s/AKfycbx_beVAaw9S_pD3xtqhL9uHegN_aZ-ekqROjSsTliS8Vtvew174RMDJ8tFwDmvEV3SD/exec";
     const $ = s => document.querySelector(s);
     const loading = $('#loading'), view = $('#view'), err = $('#error');
     const img = $('#img'), title = $('#title'), desc = $('#desc'), id = $('#id');
@@ -23,7 +23,7 @@
     function jsonpCallback(data) {
       try {
         if (!data.ok) throw new Error(data.error || 'unknown');
-        img.src = data.imageUrl;
+        img.src = data.imageData;
         title.textContent = data.name || '';
         desc.textContent = data.result || '';
         id.textContent = data.id ? `No. ${data.id}` : '';
