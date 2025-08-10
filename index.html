@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>今日のあなたの梵字曼荼羅</title>
+  <title>今日のあなたの梵字カード占い</title>
   <style>
     body {
       margin: 0;
@@ -141,7 +141,7 @@
 </head>
 <body>
   <div class="guide-name hidden">🌟 道先案内人　光陽 ✨</div>
-  <div class="header hidden">🌸今日のあなたの梵字曼荼羅🌸</div>
+  <div class="header hidden">🌸<span id="today-date"></span>のあなたの梵字カード占い🌸</div>
   
   <div id="loading">鑑定中...</div>
   
@@ -168,6 +168,14 @@
   </div>
   
   <script>
+    // 今日の日付を設定
+    function setTodayDate() {
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const date = today.getDate();
+      document.getElementById('today-date').textContent = `${month}月${date}日`;
+    }
+    
     const API_BASE = "https://script.google.com/macros/s/AKfycbx_beVAaw9S_pD3xtqhL9uHegN_aZ-ekqROjSsTliS8Vtvew174RMDJ8tFwDmvEV3SD/exec";
     const $ = s => document.querySelector(s);
     const loading = $('#loading'), view = $('#view'), err = $('#error');
@@ -197,6 +205,7 @@
     }
     
     function load() {
+      setTodayDate(); // 日付を設定
       const script = document.createElement('script');
       script.src = `${API_BASE}?callback=jsonpCallback&_=${Date.now()}`;
       document.head.appendChild(script);
