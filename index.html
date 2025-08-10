@@ -1,85 +1,106 @@
-// ===== 設定 =====
-const SPREADSHEET_ID = '1yypv6jAIuZq8YgTA-nUhp4fxcXK1ItGuLjKTaWU7xDA'; // ←あなたのID
-const SHEET_NAME = 'hotoke';
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>今日の占い</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#15171b; --text:#eef2f7; --muted:#a7b0bd; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+      background: radial-gradient(1200px 800px at 70% -20%, #1f2430 0%, #0b0c10 60%);
+      color: var(--text); min-height: 100svh; display: grid; place-items: center; padding: 24px;
+    }
+    .wrap { width: min(920px, 100%); }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    h1 { font-size: clamp(22px, 3.4vw, 36px); margin: 0 0 12px; letter-spacing: .02em; }
+    p.lead { color: var(--muted); margin: 0 0 20px; }
+    .actions { display: flex; gap: 12px; margin: 20px 0 24px; }
+    button {
+      appearance: none; border: 0; border-radius: 14px; padding: 12px 18px; font-weight: 700; cursor: pointer;
+      background: #5c8df6; color: white; box-shadow: 0 10px 24px rgba(92,141,246,.35);
+      transition: transform .06s ease, box-shadow .2s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: #2a2f3a; color: #d8dee9; box-shadow: none; }
+    .result {
+      display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start;
+    }
+    .result img {
+      width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .title { font-size: clamp(20px, 2.6vw, 28px); margin: 8px 0; }
+    .desc { color: var(--muted); line-height: 1.75; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .hidden { display: none; }
+    @media (max-width: 720px) {
+      .result { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>今日の占い</h1>
+      <p class="lead">ボタンを押すと、ランダムで占い結果が出ます（画像＆テキストはGAS経由で取得）。</p>
+      <div class="actions">
+        <button id="drawBtn">占う ✨</button>
+        <button id="clearBtn" class="secondary">クリア</button>
+      </div>
 
-// ===== ルータ =====
-function doGet(e) {
-  const path = (e && e.pathInfo) ? e.pathInfo.split('/').filter(Boolean) : [];
-  const route = path[0] || 'draw';
-  try {
-    if (route === 'image') return handleImage(e);
-    return handleDraw();
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok:false, error:String(err) }))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({'Access-Control-Allow-Origin':'*'});
-  }
-}
+      <div id="loading" class="muted hidden">引いてます…</div>
 
-// ===== 抽選 =====
-function handleDraw() {
-  const sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
-  const values = sh.getDataRange().getValues();
-  if (!values || values.length < 2) throw new Error('データ行がありません');
+      <div id="result" class="result hidden">
+        <img id="resImg" alt="占い画像" />
+        <div>
+          <div class="title" id="resTitle"></div>
+          <div class="desc" id="resDesc"></div>
+          <div class="muted" id="resId"></div>
+        </div>
+      </div>
 
-  const header = values[0];
-  const rows = values.slice(1).filter(r => r.join('').trim() !== '');
+      <div id="error" class="muted hidden"></div>
+    </div>
+  </div>
 
-  const idx = name => header.indexOf(name);
-  const iNo   = idx('no');
-  const iCat  = idx('分類');
-  const iName = idx('名前');
-  const iText = idx('占い結果');
-  const iImg  = idx('画像URL'); // ここにGoogleドライブURL
+  <script>
+    // ← ここをあなたのGASウェブアプリURL（/exec）に差し替える
+    const API_BASE = 'https://script.google.com/macros/s/XXXXXXXXXXXX/exec';
 
-  // ランダム1件
-  const pick = rows[Math.floor(Math.random() * rows.length)];
+    const $ = (s)=>document.querySelector(s);
+    const drawBtn = $('#drawBtn'), clearBtn = $('#clearBtn');
+    const resultEl = $('#result'), imgEl = $('#resImg'), titleEl = $('#resTitle'), descEl = $('#resDesc'), idEl = $('#resId');
+    const loadingEl = $('#loading'), errorEl = $('#error');
 
-  // 画像URL → fileId 抜き出し（共有URL/サムネURL どっちでもOK）
-  const rawUrl = String(pick[iImg] || '');
-  const fileId = extractDriveFileId(rawUrl);
-  if (!fileId) throw new Error('画像URLからfileIdが取れません: ' + rawUrl);
+    function show(el){ el.classList.remove('hidden'); }
+    function hide(el){ el.classList.add('hidden'); }
 
-  // GAS経由画像URL
-  const base = ScriptApp.getService().getUrl();
-  const imageUrl = base.replace(/\/exec$/, '/exec/image') + '?fileId=' + encodeURIComponent(fileId);
+    async function draw() {
+      hide(errorEl); hide(resultEl); show(loadingEl);
+      try {
+        const res = await fetch(`${API_BASE}/draw`, { method: 'GET' }); // シンプルGETでCORSプレフライト回避
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'error');
+        imgEl.src = data.imageUrl;
+        titleEl.textContent = data.title || '結果';
+        descEl.textContent = data.description || '';
+        idEl.textContent = data.id ? `#${data.id}` : '';
+        show(resultEl);
+      } catch (err) {
+        errorEl.textContent = '取得に失敗しました：' + err.message;
+        show(errorEl);
+      } finally {
+        hide(loadingEl);
+      }
+    }
 
-  const payload = {
-    ok: true,
-    id: pick[iNo] ?? '',
-    category: pick[iCat] ?? '',
-    name: pick[iName] ?? '',
-    result: pick[iText] ?? '',
-    imageUrl
-  };
-
-  return ContentService.createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'});
-}
-
-// ===== 画像プロキシ（ドライブ公開不要）=====
-function handleImage(e) {
-  const fileId = e.parameter.fileId;
-  if (!fileId) throw new Error('fileIdが必要です');
-  const blob = DriveApp.getFileById(fileId).getBlob();
-  return ContentService.createBinaryOutput().setContent(blob.getBytes())
-    .setMimeType(blob.getContentType())
-    .setHeaders({'Access-Control-Allow-Origin':'*','Cache-Control':'public, max-age=3600'});
-}
-
-// 共有URLやサムネURLからfileIdを抜く
-function extractDriveFileId(url) {
-  if (!url) return '';
-  // パターン例:
-  // https://drive.google.com/file/d/<ID>/view?usp=...
-  // https://drive.google.com/open?id=<ID>
-  // https://lh3.googleusercontent.com/d/<ID>=s...
-  const m1 = url.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
-  if (m1) return m1[1];
-  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-  if (m2) return m2[1];
-  const m3 = url.match(/googleusercontent\.com\/[^/]+\/([a-zA-Z0-9_-]{10,})/);
-  if (m3) return m3[1];
-  return '';
-}
+    drawBtn.addEventListener('click', draw);
+    clearBtn.addEventListener('click', ()=>{ hide(resultEl); hide(errorEl); });
+  </script>
+</body>
+</html>
