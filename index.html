@@ -22,6 +22,34 @@
       text-align: center;
       color: #2d3436;
       font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(45, 52, 54, 0.3);
+      border-top: 4px solid #2d3436;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .loading-dots {
+      font-size: 30px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
     }
     
     .guide-name {
@@ -136,7 +164,11 @@
     <div>🌸あなたの梵字カード占い🌸</div>
   </div>
   
-  <div id="loading">鑑定中...</div>
+  <div id="loading">
+    <div class="loading-spinner"></div>
+    <div>鑑定中...</div>
+    <div class="loading-dots">🔮 ✨ 🌟</div>
+  </div>
   
   <div id="view" style="display:none">
     <div class="name-section">🌟「<span id="title"></span>」🌟</div>
